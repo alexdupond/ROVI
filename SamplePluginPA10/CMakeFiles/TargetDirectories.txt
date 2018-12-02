@@ -1,3 +1,0 @@
-/home/alexdupond/Documents/ROVI/SamplePluginPA10/CMakeFiles/rebuild_cache.dir
-/home/alexdupond/Documents/ROVI/SamplePluginPA10/CMakeFiles/RoVi1PluginPA10.dir
-/home/alexdupond/Documents/ROVI/SamplePluginPA10/CMakeFiles/edit_cache.dir
