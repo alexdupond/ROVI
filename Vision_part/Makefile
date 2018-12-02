@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/alexdupond/ROVI/SamplePluginPA10
+CMAKE_SOURCE_DIR = /home/alexdupond/ROVI/Vision_part
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/alexdupond/ROVI/SamplePluginPA10
+CMAKE_BINARY_DIR = /home/alexdupond/ROVI/Vision_part
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/alexdupond/ROVI/SamplePluginPA10/CMakeFiles /home/alexdupond/ROVI/SamplePluginPA10/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/alexdupond/ROVI/Vision_part/CMakeFiles /home/alexdupond/ROVI/Vision_part/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/alexdupond/ROVI/SamplePluginPA10/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/alexdupond/ROVI/Vision_part/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -111,98 +111,44 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named RoVi1PluginPA10
+# Target rules for targets named final_project
 
 # Build rule for target.
-RoVi1PluginPA10: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 RoVi1PluginPA10
-.PHONY : RoVi1PluginPA10
+final_project: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 final_project
+.PHONY : final_project
 
 # fast build rule for target.
-RoVi1PluginPA10/fast:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/build
-.PHONY : RoVi1PluginPA10/fast
+final_project/fast:
+	$(MAKE) -f CMakeFiles/final_project.dir/build.make CMakeFiles/final_project.dir/build
+.PHONY : final_project/fast
 
-qrc_resources.o: qrc_resources.cpp.o
+final_project.o: final_project.cpp.o
 
-.PHONY : qrc_resources.o
-
-# target to build an object file
-qrc_resources.cpp.o:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/qrc_resources.cpp.o
-.PHONY : qrc_resources.cpp.o
-
-qrc_resources.i: qrc_resources.cpp.i
-
-.PHONY : qrc_resources.i
-
-# target to preprocess a source file
-qrc_resources.cpp.i:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/qrc_resources.cpp.i
-.PHONY : qrc_resources.cpp.i
-
-qrc_resources.s: qrc_resources.cpp.s
-
-.PHONY : qrc_resources.s
-
-# target to generate assembly for a file
-qrc_resources.cpp.s:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/qrc_resources.cpp.s
-.PHONY : qrc_resources.cpp.s
-
-src/SamplePlugin.o: src/SamplePlugin.cpp.o
-
-.PHONY : src/SamplePlugin.o
+.PHONY : final_project.o
 
 # target to build an object file
-src/SamplePlugin.cpp.o:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/src/SamplePlugin.cpp.o
-.PHONY : src/SamplePlugin.cpp.o
+final_project.cpp.o:
+	$(MAKE) -f CMakeFiles/final_project.dir/build.make CMakeFiles/final_project.dir/final_project.cpp.o
+.PHONY : final_project.cpp.o
 
-src/SamplePlugin.i: src/SamplePlugin.cpp.i
+final_project.i: final_project.cpp.i
 
-.PHONY : src/SamplePlugin.i
-
-# target to preprocess a source file
-src/SamplePlugin.cpp.i:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/src/SamplePlugin.cpp.i
-.PHONY : src/SamplePlugin.cpp.i
-
-src/SamplePlugin.s: src/SamplePlugin.cpp.s
-
-.PHONY : src/SamplePlugin.s
-
-# target to generate assembly for a file
-src/SamplePlugin.cpp.s:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/src/SamplePlugin.cpp.s
-.PHONY : src/SamplePlugin.cpp.s
-
-src/moc_SamplePlugin.o: src/moc_SamplePlugin.cpp.o
-
-.PHONY : src/moc_SamplePlugin.o
-
-# target to build an object file
-src/moc_SamplePlugin.cpp.o:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/src/moc_SamplePlugin.cpp.o
-.PHONY : src/moc_SamplePlugin.cpp.o
-
-src/moc_SamplePlugin.i: src/moc_SamplePlugin.cpp.i
-
-.PHONY : src/moc_SamplePlugin.i
+.PHONY : final_project.i
 
 # target to preprocess a source file
-src/moc_SamplePlugin.cpp.i:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/src/moc_SamplePlugin.cpp.i
-.PHONY : src/moc_SamplePlugin.cpp.i
+final_project.cpp.i:
+	$(MAKE) -f CMakeFiles/final_project.dir/build.make CMakeFiles/final_project.dir/final_project.cpp.i
+.PHONY : final_project.cpp.i
 
-src/moc_SamplePlugin.s: src/moc_SamplePlugin.cpp.s
+final_project.s: final_project.cpp.s
 
-.PHONY : src/moc_SamplePlugin.s
+.PHONY : final_project.s
 
 # target to generate assembly for a file
-src/moc_SamplePlugin.cpp.s:
-	$(MAKE) -f CMakeFiles/RoVi1PluginPA10.dir/build.make CMakeFiles/RoVi1PluginPA10.dir/src/moc_SamplePlugin.cpp.s
-.PHONY : src/moc_SamplePlugin.cpp.s
+final_project.cpp.s:
+	$(MAKE) -f CMakeFiles/final_project.dir/build.make CMakeFiles/final_project.dir/final_project.cpp.s
+.PHONY : final_project.cpp.s
 
 # Help Target
 help:
@@ -211,17 +157,11 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... rebuild_cache"
-	@echo "... RoVi1PluginPA10"
+	@echo "... final_project"
 	@echo "... edit_cache"
-	@echo "... qrc_resources.o"
-	@echo "... qrc_resources.i"
-	@echo "... qrc_resources.s"
-	@echo "... src/SamplePlugin.o"
-	@echo "... src/SamplePlugin.i"
-	@echo "... src/SamplePlugin.s"
-	@echo "... src/moc_SamplePlugin.o"
-	@echo "... src/moc_SamplePlugin.i"
-	@echo "... src/moc_SamplePlugin.s"
+	@echo "... final_project.o"
+	@echo "... final_project.i"
+	@echo "... final_project.s"
 .PHONY : help
 
 

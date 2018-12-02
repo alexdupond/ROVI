@@ -1,0 +1,3 @@
+/home/alexdupond/ROVI/Vision_part/CMakeFiles/rebuild_cache.dir
+/home/alexdupond/ROVI/Vision_part/CMakeFiles/final_project.dir
+/home/alexdupond/ROVI/Vision_part/CMakeFiles/edit_cache.dir
