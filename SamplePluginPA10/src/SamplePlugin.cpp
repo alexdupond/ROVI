@@ -1,4 +1,6 @@
 #include "SamplePlugin.hpp"
+//#include <rw/rw.hpp>
+
 
 #include <rws/RobWorkStudio.hpp>
 
@@ -6,10 +8,12 @@
 
 #include <rw/loaders/ImageLoader.hpp>
 #include <rw/loaders/WorkCellFactory.hpp>
-
 #include <functional>
 
+#include <rw/kinematics/MovableFrame.hpp>
+
 using namespace rw::common;
+using namespace rw::math;
 using namespace rw::graphics;
 using namespace rw::kinematics;
 using namespace rw::loaders;
@@ -169,6 +173,20 @@ void SamplePlugin::timer() {
 		Frame* cameraFrame = _wc->findFrame("CameraSim");
 		_framegrabber->grab(cameraFrame, _state);
 		const Image& image = _framegrabber->getImage();
+
+    State state = _wc->getDefaultState();
+    Frame* markerFrame = _wc->findFrame("Marker");
+    MovableFrame* mFrame = (MovableFrame*)markerFrame;
+
+    const Vector3D<double> d(-0.098, -0.819, 1.649);
+    const RPY<double> rpy(0.0, 0.0, -1.0);
+    log().info() << "Rotation matrix: " << rpy.toRotation3D() << "\n";
+    const Transform3D<double> trans(d, rpy.toRotation3D());
+
+    mFrame->setTransform(trans, state);
+    stateChangedListener(state);
+    getRobWorkStudio()->setState(_state);
+
 
 		// Convert to OpenCV image
 		Mat im = toOpenCVImage(image);
