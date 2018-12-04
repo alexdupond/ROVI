@@ -10,7 +10,9 @@
 #include <rw/loaders/WorkCellFactory.hpp>
 #include <functional>
 
-#include <rw/kinematics/MovableFrame.hpp>
+#include <iostream>
+#include <fstream>
+
 
 using namespace rw::common;
 using namespace rw::math;
@@ -63,6 +65,7 @@ void SamplePlugin::initialize() {
 	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/alexdupond/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
 	getRobWorkStudio()->setWorkCell(wc);
 
+
 	// Load Lena image
 	Mat im, image;
 	im = imread("/home/alexdupond/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
@@ -113,6 +116,25 @@ void SamplePlugin::open(WorkCell* workcell)
     }
 }
 
+void SamplePlugin::loadMotions(){
+  string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
+  std::ifstream motionFile(path);
+
+
+  if(motionFile.is_open()){
+    double X, Y, Z, R0, P0, Y0;
+    while(motionFile >> X >> Y >> Z >> R0 >> P0 >> Y0){
+        log().info() << "X = " << X << ", Y = " << Y << ", Z = " << Z << ", R0 = " << R0 << ", P0 = " << P0 << ", Y0 = " << Y0 << "\n";
+        const Vector3D<double> d(X, Y, Z);
+        const RPY<double> rpy(R0, P0, Y0);
+        const Transform3D<double> trans(d, rpy.toRotation3D());
+        _motions.push_back(trans);
+    }
+    motionFile.close();
+  }
+
+}
+
 
 void SamplePlugin::close() {
     log().info() << "CLOSE" << "\n";
@@ -138,7 +160,7 @@ void SamplePlugin::close() {
 }
 
 Mat SamplePlugin::toOpenCVImage(const Image& img) {
-	Mat res(img.getHeight(),img.getWidth(), CV_8SC3);
+	Mat res(img.getHeight(),img.getWidth(), CV_8UC3);
 	res.data = (uchar*)img.getImageData();
 	return res;
 }
@@ -148,7 +170,10 @@ void SamplePlugin::btnPressed() {
     QObject *obj = sender();
 	if(obj==_btn0){
 		log().info() << "Button 0\n";
+    // Loads the motion
+    loadMotions();
 		// Set a new texture (one pixel = 1 mm)
+
 		Image::Ptr image;
 		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/markers/Marker1.ppm");
 		_textureRender->setImage(*image);
@@ -178,11 +203,11 @@ void SamplePlugin::timer() {
     Frame* markerFrame = _wc->findFrame("Marker");
     MovableFrame* mFrame = (MovableFrame*)markerFrame;
 
-    const Vector3D<double> d(-0.098, -0.819, 1.649);
-    const RPY<double> rpy(0.0, 0.0, -1.0);
-    log().info() << "Rotation matrix: " << rpy.toRotation3D() << "\n";
-    const Transform3D<double> trans(d, rpy.toRotation3D());
 
+    if(_motionIndex == (int)_motions.size())
+      _motionIndex = 0;
+
+    Transform3D<double> trans = _motions[_motionIndex];
     mFrame->setTransform(trans, state);
     stateChangedListener(state);
     getRobWorkStudio()->setState(_state);
@@ -193,15 +218,87 @@ void SamplePlugin::timer() {
 		Mat imflip;
 		cv::flip(im, imflip, 0);
 
+
+
 		// Show in QLabel
 		QImage img(imflip.data, imflip.cols, imflip.rows, imflip.step, QImage::Format_RGB888);
 		QPixmap p = QPixmap::fromImage(img);
 		unsigned int maxW = 400;
 		unsigned int maxH = 800;
 		_label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
+    _motionIndex++;
+    findCenterMaker1(im);
 	}
 }
 
 void SamplePlugin::stateChangedListener(const State& state) {
   _state = state;
+}
+
+
+void SamplePlugin::findCenterMaker1(Mat &image){
+  Mat hsv, blured_img;
+  Mat detected_egdes, dst, src, gray;
+
+  cvtColor(image, hsv, CV_BGR2HSV);
+
+
+  vector<Mat> hsv_planes;
+  split(hsv, hsv_planes);
+  Mat h = hsv_planes[0];
+  Mat s = hsv_planes[1];
+  Mat v = hsv_planes[2];
+
+  int lowThreshold = 10;
+  int ratio = 3;
+  int kernal_size = 3;
+
+  // bluring the image
+  medianBlur(h, blured_img, 21);
+
+  // Using canny to find edges
+  Canny(blured_img, detected_egdes, lowThreshold, lowThreshold*ratio, kernal_size);
+
+  // Setting up vectors and findeing the contours
+  vector<vector<Point> > contours;
+  vector<Vec4i> hierarchy;
+  findContours( detected_egdes, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_NONE, Point(0, 0) );
+
+  // Creating points vector finding the center
+  vector<Point> points;
+
+  // Red point if the center pixel of the red circle
+  Point redpoint(0,0);
+  for( int i = 0; i < (int)contours.size(); i++ )
+      {
+        double area = contourArea(contours[i]);
+        double perimeter = arcLength(contours[i], false);
+        double circle_detect = (4*CV_PI*area)/(pow(perimeter, 2));
+        Moments m = moments(contours[i], true);
+        int cx = m.m10/m.m00;
+        int cy = m.m01/m.m00;
+        Point center(cx,cy);
+
+        if(circle_detect > 0.8 && (area > 2500)){
+          points.push_back(center);
+          Scalar color = image.at<Vec3b>(cy, cx);
+          if(color[2] > 80)
+            redpoint = center;
+
+      }
+  }
+
+  // Finding the center of circles (coc)
+  if(points.size()){
+    Point coc(0,0);
+    for (int i = 0; i < points.size(); i++) {
+      coc.x += points[i].x;
+      coc.y +=points[i].y;
+    }
+    coc.x = coc.x/points.size();
+    coc.y = coc.y/points.size();
+
+    log().info() << "Center of circles = " << coc.x << ", " << coc.y << "\n";
+  }
+
 }
