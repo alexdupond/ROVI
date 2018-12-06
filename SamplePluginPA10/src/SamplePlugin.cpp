@@ -10,6 +10,9 @@
 #include <rw/loaders/WorkCellFactory.hpp>
 #include <functional>
 
+#include <rw/math/Q.hpp>
+#include <math.h>
+
 #include <iostream>
 #include <fstream>
 
@@ -192,6 +195,57 @@ void SamplePlugin::btnPressed() {
 	}
 }
 
+// This function calculates delta U as in Equation 4.13. The output class is a velocity screw as that is a 6D vector with a positional and rotational part
+// What a velocity screw really is is not important to this class. For our purposes it is only a container.
+rw::math::VelocityScrew6D<double> calculateDeltaU(const rw::math::Transform3D<double>& baseTtool, const rw::math::Transform3D<double>& baseTtool_desired) {
+    // Calculate the positional difference, dp
+    rw::math::Vector3D<double> dp = baseTtool_desired.P() - baseTtool.P();
+
+    // Calculate the rotational difference, dw
+    rw::math::EAA<double> dw(baseTtool_desired.R() * rw::math::inverse(baseTtool.R()));
+
+    return rw::math::VelocityScrew6D<double>(dp, dw);
+}
+
+//GetZimg
+rw::math::Jacobian getZimg (rw::math::Jacobian imageJacobian, rw::kinematics::Frame* tcp_frame,
+                            rw::kinematics::State state, rw::models::Device::Ptr device){
+    // Get robot Jacobian
+    rw::math::Jacobian robotJ = device->baseJframe(tcp_frame, state);
+    // Get  RBC =R-Cam_Base Transposed
+    rw::math::Transform3D<> baseTtool_rw = device->baseTframe(tcp_frame, state);
+    Rotation3D<double> Rot = baseTtool_rw.R().inverse();
+    rw::math::Jacobian TRot(6,6);
+        TRot(0,0) = Rot(0,0);
+        TRot(0,1) = Rot(0,1);
+        TRot(0,2) = Rot(0,2);
+
+        TRot(1,0) = Rot(0,3);
+        TRot(1,1) = Rot(0,4);
+        TRot(1,2) = Rot(0,5);
+
+        TRot(2,0) = Rot(0,6);
+        TRot(2,1) = Rot(0,7);
+        TRot(2,2) = Rot(0,8);
+
+    int sizeJ = 6;
+    rw::math::Jacobian Sp(sizeJ,sizeJ);
+    // Make S(q) = (RBC, 0) (0,RBC)
+    for (int row = 0; row <= sizeJ-1; row++){
+        for ( int col = 0; col <= sizeJ-1; col++){
+            if (row <= 2 && col <= 2 )
+                Sp(row,col) = TRot(row,col);
+            else if(row > 2 && col > 2 )
+                Sp(row,col) = Rot(row-3, col-3);
+            else
+                Sp(row,col) = 0;
+        }
+    }
+    return (imageJacobian*Sp)*robotJ;  // Zimg= Image Jacobian * S(p) * Robot-Jacobian(q)
+}
+
+
+
 // Get IImage J
 rw::math::Jacobian imageJ (double x,double y,double z,double f){
     double u = (f * x)/z;
@@ -231,7 +285,6 @@ void SamplePlugin::timer() {
         stateChangedListener(state);
         getRobWorkStudio()->setState(_state);
 
-
         // Convert to OpenCV image
         Mat im = toOpenCVImage(image);
         Mat imflip;
@@ -247,8 +300,6 @@ void SamplePlugin::timer() {
         Point p = findCenterMaker1(im);
 
         /// from Image Jacobian to new q.
-        ///
-        ///
         rw::models::Device::Ptr device = _wc->findDevice("PA10");
         if(device == nullptr) {
           RW_THROW("Device " << device_name << " was not found!");
@@ -265,9 +316,25 @@ void SamplePlugin::timer() {
 
         // Get Zimg
         // q=currentstate, tcp_frame
-        rw::math::Jacobian Zimg = getZimg(imJ, q, tcp_frame, state, device);
+        rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
         cout <<"Zimg:\n"<< Zimg << endl;
 
+        // Getting newQ
+        const rw::math::Transform3D<> baseTtool = device->baseTframe(tcp_frame, state);
+        // Choose a small positional change, deltaP (ca. 10^-4)
+        const rw::math::Vector3D<double> deltaP(x, y, z);
+
+        // Choose baseTtool_desired by adding the positional change deltaP to the position part of baseTtool
+        const rw::math::Vector3D<> deltaPdesired = baseTtool.P() + deltaP;
+        const rw::math::Transform3D<double> baseTtool_desired(deltaPdesired, baseTtool.R());
+
+        rw::math::VelocityScrew6D<double> deltaU = calculateDeltaU(baseTtool, baseTtool_desired);
+
+        rw::math::Q deltaQ( LinearAlgebra::pseudoInverse(Zimg.e())*deltaU.e() );
+
+        rw::math::Q q = device->getQ(state);
+        //device->setQ(q+deltaQ, state);
+        log().info() << "deltaQ:" <<q << "\n";
         ///
 
 	}
