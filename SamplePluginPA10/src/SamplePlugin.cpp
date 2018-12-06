@@ -11,6 +11,7 @@
 #include <functional>
 
 #include <rw/math/Q.hpp>
+#include <rw/math.hpp>
 #include <math.h>
 
 #include <iostream>
@@ -282,8 +283,8 @@ void SamplePlugin::timer() {
 
         Transform3D<double> trans = _motions[_motionIndex];
         mFrame->setTransform(trans, state);
-        stateChangedListener(state);
-        getRobWorkStudio()->setState(_state);
+        //stateChangedListener(state);
+        //getRobWorkStudio()->setState(_state);
 
         // Convert to OpenCV image
         Mat im = toOpenCVImage(image);
@@ -297,27 +298,31 @@ void SamplePlugin::timer() {
         unsigned int maxH = 800;
         _label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
         _motionIndex++;
-        Point p = findCenterMaker1(im);
+        Point centerPoint = findCenterMaker1(im);
 
-        /// from Image Jacobian to new q.
+        // Robo devices
+        string device_name = "PA10";
         rw::models::Device::Ptr device = _wc->findDevice("PA10");
         if(device == nullptr) {
           RW_THROW("Device " << device_name << " was not found!");
         }
 
-        rw::kinematics::Frame* tcp_frame = wc->findFrame(device_name + ".Joint7");
+        rw::kinematics::Frame* tcp_frame = _wc->findFrame(device_name + ".Joint7");
         if(tcp_frame == nullptr) {
           RW_THROW("TCP frame not found!");
         }
 
+        /// Perfect point follow:
+        Transform3D<double> MarkerToCam = markerFrame->fTf(tcp_frame,state);
+        Transform3D<double> Cam = trans * MarkerToCam;
+
         // Get image Jacobian
-        double z=0.5, f=823;
+        double x =Cam.P()(0) , y = Cam.P()(1) , z=Cam.P()(2), f=1;
         rw::math::Jacobian imJ = imageJ(x,y,z,f);
 
         // Get Zimg
         // q=currentstate, tcp_frame
         rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
-        cout <<"Zimg:\n"<< Zimg << endl;
 
         // Getting newQ
         const rw::math::Transform3D<> baseTtool = device->baseTframe(tcp_frame, state);
@@ -331,12 +336,17 @@ void SamplePlugin::timer() {
         rw::math::VelocityScrew6D<double> deltaU = calculateDeltaU(baseTtool, baseTtool_desired);
 
         rw::math::Q deltaQ( LinearAlgebra::pseudoInverse(Zimg.e())*deltaU.e() );
+        log().info() << "deltaQ:" << deltaQ << "\n";
 
+      //  state = _wc->getDefaultState();
         rw::math::Q q = device->getQ(state);
-        //device->setQ(q+deltaQ, state);
-        log().info() << "deltaQ:" <<q << "\n";
-        ///
+        log().info() << "Q:" << q << "\n";
 
+        device->setQ(q+deltaQ, state);
+        log().info() << "Q + Qdelta:" << q+deltaQ << "\n";
+        stateChangedListener(state);
+        getRobWorkStudio()->setState(_state);
+        ///
 	}
 }
 
