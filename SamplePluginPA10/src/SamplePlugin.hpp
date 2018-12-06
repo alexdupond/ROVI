@@ -52,7 +52,7 @@ private slots:
 
 private:
     static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
-    void findCenterMaker1(Mat &image);
+    Point findCenterMaker1(Mat &image);
 
     QTimer* _timer;
 

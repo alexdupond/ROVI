@@ -244,7 +244,7 @@ void SamplePlugin::timer() {
         unsigned int maxH = 800;
         _label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
         _motionIndex++;
-        findCenterMaker1(im);
+        Point p = findCenterMaker1(im);
 
         /// from Image Jacobian to new q.
         ///
@@ -278,7 +278,7 @@ void SamplePlugin::stateChangedListener(const State& state) {
 }
 
 
-void SamplePlugin::findCenterMaker1(Mat &image){
+Point SamplePlugin::findCenterMaker1(Mat &image){
   Mat hsv, blured_img;
   Mat detected_egdes, dst, src, gray;
 
@@ -331,8 +331,8 @@ void SamplePlugin::findCenterMaker1(Mat &image){
   }
 
   // Finding the center of circles (coc)
+  Point coc(0,0);
   if(points.size()){
-    Point coc(0,0);
     for (int i = 0; i < points.size(); i++) {
       coc.x += points[i].x;
       coc.y +=points[i].y;
@@ -340,7 +340,8 @@ void SamplePlugin::findCenterMaker1(Mat &image){
     coc.x = coc.x/points.size();
     coc.y = coc.y/points.size();
 
-    log().info() << "Center of circles = " << coc.x << ", " << coc.y << "\n";
+    return coc;
   }
 
+  return coc;
 }
