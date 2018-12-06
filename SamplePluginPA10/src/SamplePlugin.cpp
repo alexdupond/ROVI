@@ -192,42 +192,84 @@ void SamplePlugin::btnPressed() {
 	}
 }
 
+// Get IImage J
+rw::math::Jacobian imageJ (double x,double y,double z,double f){
+    double u = (f * x)/z;
+    double v = (f * y)/z;
+    vector<double> du {-f/z,     0,  u/z,                (u*v)/f, -( (pow(f,2)+pow(u,2))/f ),   v };
+    vector<double> dv {   0,  -f/z,  v/z,  (pow(f,2)+pow(u,2))/f,                   -(u*v)/f,  -u };
+    vector<vector<double>> dUdV {du,dv};
+    rw::math::Jacobian imageJ(2,6);
+    for (int i = 0; i<imageJ.size1();i++)
+    {
+        for(int j = 0; j<imageJ.size2();j++)
+        {
+            imageJ(i,j)=dUdV[i][j];
+        }
+    }
+
+    return imageJ;
+}
+
 void SamplePlugin::timer() {
-	if (_framegrabber != NULL) {
-		// Get the image as a RW image
-		Frame* cameraFrame = _wc->findFrame("CameraSim");
-		_framegrabber->grab(cameraFrame, _state);
-		const Image& image = _framegrabber->getImage();
+    if (_framegrabber != NULL) {
+        // Get the image as a RW image
+        Frame* cameraFrame = _wc->findFrame("CameraSim");
+        _framegrabber->grab(cameraFrame, _state);
+        const Image& image = _framegrabber->getImage();
 
-    State state = _wc->getDefaultState();
-    Frame* markerFrame = _wc->findFrame("Marker");
-    MovableFrame* mFrame = (MovableFrame*)markerFrame;
-
-
-    if(_motionIndex == (int)_motions.size())
-      _motionIndex = 0;
-
-    Transform3D<double> trans = _motions[_motionIndex];
-    mFrame->setTransform(trans, state);
-    stateChangedListener(state);
-    getRobWorkStudio()->setState(_state);
+        State state = _wc->getDefaultState();
+        Frame* markerFrame = _wc->findFrame("Marker");
+        MovableFrame* mFrame = (MovableFrame*)markerFrame;
 
 
-		// Convert to OpenCV image
-		Mat im = toOpenCVImage(image);
-		Mat imflip;
-		cv::flip(im, imflip, 0);
+        if(_motionIndex == (int)_motions.size())
+          _motionIndex = 0;
+
+        Transform3D<double> trans = _motions[_motionIndex];
+        mFrame->setTransform(trans, state);
+        stateChangedListener(state);
+        getRobWorkStudio()->setState(_state);
 
 
+        // Convert to OpenCV image
+        Mat im = toOpenCVImage(image);
+        Mat imflip;
+        cv::flip(im, imflip, 0);
 
-		// Show in QLabel
-		QImage img(imflip.data, imflip.cols, imflip.rows, imflip.step, QImage::Format_RGB888);
-		QPixmap p = QPixmap::fromImage(img);
-		unsigned int maxW = 400;
-		unsigned int maxH = 800;
-		_label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
-    _motionIndex++;
-    findCenterMaker1(im);
+        // Show in QLabel
+        QImage img(imflip.data, imflip.cols, imflip.rows, imflip.step, QImage::Format_RGB888);
+        QPixmap p = QPixmap::fromImage(img);
+        unsigned int maxW = 400;
+        unsigned int maxH = 800;
+        _label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
+        _motionIndex++;
+        findCenterMaker1(im);
+
+        /// from Image Jacobian to new q.
+        ///
+        ///
+        rw::models::Device::Ptr device = _wc->findDevice("PA10");
+        if(device == nullptr) {
+          RW_THROW("Device " << device_name << " was not found!");
+        }
+
+        rw::kinematics::Frame* tcp_frame = wc->findFrame(device_name + ".Joint7");
+        if(tcp_frame == nullptr) {
+          RW_THROW("TCP frame not found!");
+        }
+
+        // Get image Jacobian
+        double z=0.5, f=823;
+        rw::math::Jacobian imJ = imageJ(x,y,z,f);
+
+        // Get Zimg
+        // q=currentstate, tcp_frame
+        rw::math::Jacobian Zimg = getZimg(imJ, q, tcp_frame, state, device);
+        cout <<"Zimg:\n"<< Zimg << endl;
+
+        ///
+
 	}
 }
 
