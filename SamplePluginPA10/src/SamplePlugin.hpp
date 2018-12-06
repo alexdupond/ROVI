@@ -56,9 +56,7 @@ private:
 
     QTimer* _timer;
 
-    double _lastx;
-    double _lasty;
-    double _lastz;
+    double _deltaT = 1;
 
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;

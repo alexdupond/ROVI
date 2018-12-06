@@ -63,9 +63,6 @@ void SamplePlugin::initialize() {
 	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/alexdupond/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
 	getRobWorkStudio()->setWorkCell(wc);
 
-  double _lastx = 0;
-  double _lasty = 0;
-  double _lastz = 1;
 
 	// Load Lena image
 	Mat im, image;
@@ -118,7 +115,7 @@ void SamplePlugin::open(WorkCell* workcell)
 }
 
 void SamplePlugin::loadMotions(){
-  string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
+  string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionFast.txt";
   std::ifstream motionFile(path);
 
 
@@ -172,6 +169,7 @@ void SamplePlugin::btnPressed() {
 		log().info() << "Button 0\n";
     // Loads the motion
     loadMotions();
+
 		// Set a new texture (one pixel = 1 mm)
     string device_name = "PA10";
     rw::models::Device::Ptr device = _wc->findDevice("PA10");
@@ -193,7 +191,7 @@ void SamplePlugin::btnPressed() {
 		log().info() << "Button 1\n";
 		// Toggle the timer on and off
 		if (!_timer->isActive())
-		    _timer->start(100); // run 10 Hz
+		    _timer->start(_deltaT); // run 100 = 10 Hz // deltat
 		else
 			_timer->stop();
 	} else if(obj==_spinBox){
@@ -311,53 +309,58 @@ void SamplePlugin::timer() {
           RW_THROW("Device " << device_name << " was not found!");
         }
 
-        rw::kinematics::Frame* tcp_frame = _wc->findFrame("Camera");
+        rw::kinematics::Frame* tcp_frame = _wc->findFrame("CameraSim");
         if(tcp_frame == nullptr) {
           RW_THROW("TCP 'Camera' frame not found!");
         }
 
         /// Perfect point follow:
-        // Transform3D<double> MarkerToCam = markerFrame->fTf(tcp_frame,state);
         Transform3D<double> MarkerToCam = tcp_frame->fTf(markerFrame,state);
-
-        //Transform3D<double> MarkerToCam = tcp_frame->fTf(markerFrame,state);
-        // Vector3D<double> centerP = trans.P() * markerFrame;
         // Get image Jacobian
-        // double x = centerP(0), y = centerP(1), z = centerP(2), f=1
-        double x =  MarkerToCam.P()(0) , y = MarkerToCam.P()(1) , z = MarkerToCam.P()(2), f=1;
-        log().info() << "Point: " << x << " , " << y << " , " << z << "\n";
+        double x = MarkerToCam.P()(0) , y = MarkerToCam.P()(1) , z = MarkerToCam.P()(2), f=1;
+        //log().info() << "Point: " << x << " , " << y << " , " << z << "\n";
         rw::math::Jacobian imJ = imageJ(x,y,z,f);
 
-        double lastU = (f*_lastx)/_lastz;
-        double lastV = (f*_lasty)/_lastz;
+        // double lastU = (f*_lastx)/_lastz;
+        // double lastV = (f*_lasty)/_lastz;
         Vector2D<double> DuDv(0.0,0.0);
+        double deltaU = (f*x)/z ;//- lastU;
+        double deltav = (f*y)/z;// - lastV;
+        DuDv(0) = -deltaU;
+        DuDv(1) = -deltav;
 
-        if (_motionIndex > 1){
-          double deltaU = (f*x)/z - lastU;
-          double deltav = (f*y)/z - lastV;
-          DuDv(0) = deltaU;
-          DuDv(1) = deltav;
-        }
-        log().info() << "DuDv:" << DuDv(0) << "," << DuDv(1) << "\n";
+        //log().info() << "DuDv:" << DuDv(0) << "," << DuDv(1) << "\n";
         // Get Zimg
         rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
-
+        log().info() << "Zimg " << Zimg << "\n";
         rw::math::Q deltaQ (LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv.e() );
         //rw::math::Q deltaQ( Zimg.e().transpose() * LinearAlgebra::pseudoInverse(Zimg.e()*Zimg.e().transpose() ) * DuDv.e() );
         log().info() << "deltaQ:" << deltaQ << "\n";
         //  state = _wc->getDefaultState();
 
         rw::math::Q q = device->getQ(state);
-        log().info() << "Q:" << q << "\n";
+        //log().info() << "Q:" << q << "\n";
+        rw::math::Q newQ = q+deltaQ;
+        double deltaT = _deltaT/1000;
+        rw::math::Q v(7, deltaQ(0)/deltaT, deltaQ(1)/deltaT, deltaQ(2)/deltaT, deltaQ(3)/deltaT, deltaQ(4)/deltaT, deltaQ(5)/deltaT, deltaQ(6)/deltaT);
+        rw::math::Q vLimit = device->getVelocityLimits();
+        log().info() << "DeltaT " << deltaT << "\nVelocity limits: \n"  << vLimit << "\n Velocity: \n" << v << "\n";
 
-        device->setQ(q+deltaQ, state);
-        log().info() << "Q + Qdelta:" << q+deltaQ << "\n";
+        for(int i = 0; i < 7;i++ )
+        {
+          if( v(i) > vLimit(i))
+          {
+            log().info() << "Velocity Limited hitted at: joint " << i << " speed: "<< v(i) << "\n";
+            deltaQ(i) = vLimit(i)*deltaT;
+            log().info() << "dQ Capped to: " << deltaQ(i) << "\n";
+          }
+        }
+
+
+        device->setQ(newQ, state);
+//        log().info() << "Q + Qdelta:" << newQ << "\n";
         //stateChangedListener(state);
         getRobWorkStudio()->setState(state);
-        _lastx=x;
-        _lasty=y;
-        _lastz=z;
-        ///
 	}
 }
 
