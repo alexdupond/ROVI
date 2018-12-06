@@ -1,7 +1,5 @@
 #include "SamplePlugin.hpp"
 //#include <rw/rw.hpp>
-
-
 #include <rws/RobWorkStudio.hpp>
 
 #include <QPushButton>
@@ -17,7 +15,6 @@
 #include <iostream>
 #include <fstream>
 
-
 using namespace rw::common;
 using namespace rw::math;
 using namespace rw::graphics;
@@ -29,9 +26,7 @@ using namespace rwlibs::opengl;
 using namespace rwlibs::simulation;
 
 using namespace rws;
-
 using namespace cv;
-
 using namespace std::placeholders;
 
 SamplePlugin::SamplePlugin():
@@ -64,11 +59,13 @@ void SamplePlugin::initialize() {
 	log().info() << "INITALIZE" << "\n";
 
 	getRobWorkStudio()->stateChangedEvent().add(std::bind(&SamplePlugin::stateChangedListener, this, _1), this);
-
 	// Auto load workcell
 	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/alexdupond/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
 	getRobWorkStudio()->setWorkCell(wc);
 
+  double _lastx = 0;
+  double _lasty = 0;
+  double _lastz = 1;
 
 	// Load Lena image
 	Mat im, image;
@@ -136,7 +133,6 @@ void SamplePlugin::loadMotions(){
     }
     motionFile.close();
   }
-
 }
 
 
@@ -177,6 +173,15 @@ void SamplePlugin::btnPressed() {
     // Loads the motion
     loadMotions();
 		// Set a new texture (one pixel = 1 mm)
+    string device_name = "PA10";
+    rw::models::Device::Ptr device = _wc->findDevice("PA10");
+    if(device == nullptr) {
+      RW_THROW("Device " << device_name << " was not found!");
+    }
+    rw::math::Q startQ(7, 0, -0.65, 0, 1.8, 0, 0.42, 0);
+    device->setQ(startQ, _state);
+    getRobWorkStudio()->setState(_state);
+    _motionIndex = 0;
 
 		Image::Ptr image;
 		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/markers/Marker1.ppm");
@@ -251,18 +256,17 @@ rw::math::Jacobian getZimg (rw::math::Jacobian imageJacobian, rw::kinematics::Fr
 rw::math::Jacobian imageJ (double x,double y,double z,double f){
     double u = (f * x)/z;
     double v = (f * y)/z;
-    vector<double> du {-f/z,     0,  u/z,                (u*v)/f, -( (pow(f,2)+pow(u,2))/f ),   v };
-    vector<double> dv {   0,  -f/z,  v/z,  (pow(f,2)+pow(u,2))/f,                   -(u*v)/f,  -u };
-    vector<vector<double>> dUdV {du,dv};
+    vector<double> ju {-f/z,     0,  u/z,                (u*v)/f, -( (pow(f,2)+pow(u,2))/f ),   v };
+    vector<double> jv {   0,  -f/z,  v/z,  (pow(f,2)+pow(u,2))/f,                   -(u*v)/f,  -u };
+    vector<vector<double>> jujv {ju,jv};
     rw::math::Jacobian imageJ(2,6);
     for (int i = 0; i<imageJ.size1();i++)
     {
         for(int j = 0; j<imageJ.size2();j++)
         {
-            imageJ(i,j)=dUdV[i][j];
+            imageJ(i,j)=jujv[i][j];
         }
     }
-
     return imageJ;
 }
 
@@ -273,7 +277,7 @@ void SamplePlugin::timer() {
         _framegrabber->grab(cameraFrame, _state);
         const Image& image = _framegrabber->getImage();
 
-        State state = _wc->getDefaultState();
+        State state = _state;
         Frame* markerFrame = _wc->findFrame("Marker");
         MovableFrame* mFrame = (MovableFrame*)markerFrame;
 
@@ -307,45 +311,52 @@ void SamplePlugin::timer() {
           RW_THROW("Device " << device_name << " was not found!");
         }
 
-        rw::kinematics::Frame* tcp_frame = _wc->findFrame(device_name + ".Joint7");
+        rw::kinematics::Frame* tcp_frame = _wc->findFrame("Camera");
         if(tcp_frame == nullptr) {
-          RW_THROW("TCP frame not found!");
+          RW_THROW("TCP 'Camera' frame not found!");
         }
 
         /// Perfect point follow:
-        Transform3D<double> MarkerToCam = markerFrame->fTf(tcp_frame,state);
-        Transform3D<double> Cam = trans * MarkerToCam;
+        // Transform3D<double> MarkerToCam = markerFrame->fTf(tcp_frame,state);
+        Transform3D<double> MarkerToCam = tcp_frame->fTf(markerFrame,state);
 
+        //Transform3D<double> MarkerToCam = tcp_frame->fTf(markerFrame,state);
+        // Vector3D<double> centerP = trans.P() * markerFrame;
         // Get image Jacobian
-        double x =Cam.P()(0) , y = Cam.P()(1) , z=Cam.P()(2), f=1;
+        // double x = centerP(0), y = centerP(1), z = centerP(2), f=1
+        double x =  MarkerToCam.P()(0) , y = MarkerToCam.P()(1) , z = MarkerToCam.P()(2), f=1;
+        log().info() << "Point: " << x << " , " << y << " , " << z << "\n";
         rw::math::Jacobian imJ = imageJ(x,y,z,f);
 
+        double lastU = (f*_lastx)/_lastz;
+        double lastV = (f*_lasty)/_lastz;
+        Vector2D<double> DuDv(0.0,0.0);
+
+        if (_motionIndex > 1){
+          double deltaU = (f*x)/z - lastU;
+          double deltav = (f*y)/z - lastV;
+          DuDv(0) = deltaU;
+          DuDv(1) = deltav;
+        }
+        log().info() << "DuDv:" << DuDv(0) << "," << DuDv(1) << "\n";
         // Get Zimg
-        // q=currentstate, tcp_frame
         rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
 
-        // Getting newQ
-        const rw::math::Transform3D<> baseTtool = device->baseTframe(tcp_frame, state);
-        // Choose a small positional change, deltaP (ca. 10^-4)
-        const rw::math::Vector3D<double> deltaP(x, y, z);
-
-        // Choose baseTtool_desired by adding the positional change deltaP to the position part of baseTtool
-        const rw::math::Vector3D<> deltaPdesired = baseTtool.P() + deltaP;
-        const rw::math::Transform3D<double> baseTtool_desired(deltaPdesired, baseTtool.R());
-
-        rw::math::VelocityScrew6D<double> deltaU = calculateDeltaU(baseTtool, baseTtool_desired);
-
-        rw::math::Q deltaQ( LinearAlgebra::pseudoInverse(Zimg.e())*deltaU.e() );
+        rw::math::Q deltaQ (LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv.e() );
+        //rw::math::Q deltaQ( Zimg.e().transpose() * LinearAlgebra::pseudoInverse(Zimg.e()*Zimg.e().transpose() ) * DuDv.e() );
         log().info() << "deltaQ:" << deltaQ << "\n";
+        //  state = _wc->getDefaultState();
 
-      //  state = _wc->getDefaultState();
         rw::math::Q q = device->getQ(state);
         log().info() << "Q:" << q << "\n";
 
         device->setQ(q+deltaQ, state);
         log().info() << "Q + Qdelta:" << q+deltaQ << "\n";
-        stateChangedListener(state);
-        getRobWorkStudio()->setState(_state);
+        //stateChangedListener(state);
+        getRobWorkStudio()->setState(state);
+        _lastx=x;
+        _lasty=y;
+        _lastz=z;
         ///
 	}
 }

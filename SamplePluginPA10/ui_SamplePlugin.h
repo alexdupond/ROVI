@@ -13,7 +13,6 @@
 #include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QButtonGroup>
-#include <QtWidgets/QCalendarWidget>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QHeaderView>
@@ -38,7 +37,6 @@ public:
     QSpinBox *_spinBox;
     QSlider *_slider;
     QLabel *_label;
-    QCalendarWidget *_calendar;
 
     void setupUi(QDockWidget *SamplePlugin)
     {
@@ -82,11 +80,6 @@ public:
 
         verticalLayout->addWidget(_label);
 
-        _calendar = new QCalendarWidget(dockWidgetContents);
-        _calendar->setObjectName(QStringLiteral("_calendar"));
-
-        verticalLayout->addWidget(_calendar);
-
 
         verticalLayout_2->addLayout(verticalLayout);
 
@@ -100,8 +93,8 @@ public:
     void retranslateUi(QDockWidget *SamplePlugin)
     {
         SamplePlugin->setWindowTitle(QApplication::translate("SamplePlugin", "DockWidget", Q_NULLPTR));
-        _btn0->setText(QApplication::translate("SamplePlugin", "PushButton0", Q_NULLPTR));
-        _btn1->setText(QApplication::translate("SamplePlugin", "PushButton1", Q_NULLPTR));
+        _btn0->setText(QApplication::translate("SamplePlugin", " Load ", Q_NULLPTR));
+        _btn1->setText(QApplication::translate("SamplePlugin", " Start sequence ", Q_NULLPTR));
         _checkBox->setText(QApplication::translate("SamplePlugin", "CheckBox", Q_NULLPTR));
         _label->setText(QApplication::translate("SamplePlugin", "Label", Q_NULLPTR));
     } // retranslateUi

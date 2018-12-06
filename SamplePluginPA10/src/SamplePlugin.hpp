@@ -56,6 +56,10 @@ private:
 
     QTimer* _timer;
 
+    double _lastx;
+    double _lasty;
+    double _lastz;
+
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;
     rwlibs::opengl::RenderImage *_textureRender, *_bgRender;
