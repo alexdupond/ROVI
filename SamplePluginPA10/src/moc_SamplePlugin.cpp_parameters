@@ -4,7 +4,7 @@
 -I/usr/include
 -I/home/alexdupond/.robwork/RobWork/cmake/../ext/rwyaobi
 -I/home/alexdupond/.robwork/RobWork/cmake/../ext/rwpqp
--I/home/alexdupond/.robwork/RobWork/cmake/../ext/lua/src
+-I/usr/include/lua5.2
 -I/home/alexdupond/.robwork/RobWork/cmake/../ext/qhull/src
 -I/home/alexdupond/.robwork/RobWork/cmake/../ext/csgjs/src
 -I/usr/include/assimp
@@ -36,7 +36,7 @@
 -I/home/alexdupond/.robwork/RobWork/cmake/../src
 -I/home/alexdupond/.robwork/RobWork/cmake/../ext/rwyaobi
 -I/home/alexdupond/.robwork/RobWork/cmake/../ext/rwpqp
--I/home/alexdupond/.robwork/RobWork/cmake/../ext/lua/src
+-I/usr/include/lua5.2
 -I/home/alexdupond/.robwork/RobWork/cmake/../ext/qhull/src
 -I/home/alexdupond/.robwork/RobWork/cmake/../ext/csgjs/src
 -I/usr/include/assimp

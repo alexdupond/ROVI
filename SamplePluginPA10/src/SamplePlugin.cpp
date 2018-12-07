@@ -403,7 +403,8 @@ void SamplePlugin::timer() {
 
         Eigen::VectorXd DuDv(6);
         //rw::math::Jacobian DuDv();
-        DuDv<<( D(x1,z1,f), D(y1,z1,f), D(x2,z2,f), D(y2,z2,f), D(x3,z3,f), D(y3,z3,f) );
+        DuDv<<( -D(x1,z1,f), -D(y1,z1,f), D(x2,z2,f), -D(y2,z2,f), -D(x3,z3,f), D(y3,z3,f) );
+
         log().info() << "DUDV: " << DuDv << "\n";
         // Get Zimg
         rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
@@ -416,9 +417,7 @@ void SamplePlugin::timer() {
         log().info() << "deltaQ:" << deltaQ << "\n";
         //  state = _wc->getDefaultState();
 
-        rw::math::Q q = device->getQ(state);
         //log().info() << "Q:" << q << "\n";
-        rw::math::Q newQ = q+deltaQ;
         double deltaT = _deltaT/1000;
         rw::math::Q v(7, deltaQ(0)/deltaT, deltaQ(1)/deltaT, deltaQ(2)/deltaT, deltaQ(3)/deltaT, deltaQ(4)/deltaT, deltaQ(5)/deltaT, deltaQ(6)/deltaT);
         rw::math::Q vLimit = device->getVelocityLimits();
@@ -431,10 +430,16 @@ void SamplePlugin::timer() {
             log().info() << "Velocity Limited hitted at: joint " << i << " speed: "<< v(i) << "\n";
             deltaQ(i) = vLimit(i)*deltaT;
             log().info() << "dQ Capped to: " << deltaQ(i) << "\n";
+          }else if(v(i) < -vLimit(i)){
+            log().info() << "Velocity Limited hitted at: joint " << i << " speed: "<< v(i) << "\n";
+            deltaQ(i) = -vLimit(i)*deltaT;
+            log().info() << "dQ Capped to: " << deltaQ(i) << "\n";
           }
         }
+        log().info() << "deltaQ:" << deltaQ << "\n";
 
-
+        rw::math::Q q = device->getQ(state);
+        rw::math::Q newQ = q+deltaQ;
         device->setQ(newQ, state);
 //        log().info() << "Q + Qdelta:" << newQ << "\n";
         //stateChangedListener(state);
