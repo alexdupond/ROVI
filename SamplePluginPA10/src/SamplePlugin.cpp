@@ -115,7 +115,7 @@ void SamplePlugin::open(WorkCell* workcell)
 }
 
 void SamplePlugin::loadMotions(){
-  string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionFast.txt";
+  string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
   std::ifstream motionFile(path);
 
 
@@ -247,9 +247,9 @@ rw::math::Jacobian getZimg (rw::math::Jacobian imageJacobian, rw::kinematics::Fr
     }
     return (imageJacobian*Sp)*robotJ;  // Zimg= Image Jacobian * S(p) * Robot-Jacobian(q)
 }
-
-
-
+double D(double xORy,double z, double f){
+  return (f*xORy)/z;
+}
 // Get IImage J
 rw::math::Jacobian imageJ (double x,double y,double z,double f){
     double u = (f * x)/z;
@@ -267,6 +267,60 @@ rw::math::Jacobian imageJ (double x,double y,double z,double f){
     }
     return imageJ;
 }
+// Get IImage J
+rw::math::Jacobian imageJ2 (double x,double y,double z, double x1,double y1, double z1,double f){
+    double u = (f * x)/z;
+    double v = (f * y)/z;
+    vector<double> ju {-f/z,     0,  u/z,                (u*v)/f, -( (pow(f,2)+pow(u,2))/f ),   v };
+    vector<double> jv {   0,  -f/z,  v/z,  (pow(f,2)+pow(u,2))/f,                   -(u*v)/f,  -u };
+
+    double u1 = (f * x1)/z1;
+    double v1 = (f * y1)/z1;
+    vector<double> ju1 {-f/z1,     0,  u1/z1,                (u1*v1)/f, -( (pow(f,2)+pow(u1,2))/f ),   v1 };
+    vector<double> jv1 {   0,  -f/z1,  v/z1,  (pow(f,2)+pow(u1,2))/f,                   -(u1*v1)/f,  -u1 };
+
+    vector<vector<double>> jujv {ju,jv,ju1,jv1};
+
+    rw::math::Jacobian imageJ(4,6);
+    for (int i = 0; i<imageJ.size1();i++)
+    {
+        for(int j = 0; j<imageJ.size2();j++)
+        {
+            imageJ(i,j)=jujv[i][j];
+        }
+    }
+    return imageJ;
+  }
+
+  // Get IImage J
+rw::math::Jacobian imageJ3 (double x,double y,double z, double x1,double y1, double z1,double x2,double y2, double z2,double f){
+      double u = (f * x)/z;
+      double v = (f * y)/z;
+      vector<double> ju {-f/z,     0,  u/z,                (u*v)/f, -( (pow(f,2)+pow(u,2))/f ),   v };
+      vector<double> jv {   0,  -f/z,  v/z,  (pow(f,2)+pow(u,2))/f,                   -(u*v)/f,  -u };
+
+      double u1 = (f * x1)/z1;
+      double v1 = (f * y1)/z1;
+      vector<double> ju1 {-f/z1,     0,  u1/z1,                (u1*v1)/f, -( (pow(f,2)+pow(u1,2))/f ),   v1 };
+      vector<double> jv1 {   0,  -f/z1,  v1/z1,  (pow(f,2)+pow(u1,2))/f,                   -(u1*v1)/f,  -u1 };
+
+      double u2 = (f * x2)/z2;
+      double v2 = (f * y2)/z2;
+      vector<double> ju2 {-f/z2,     0,  u2/z2,                (u2*v2)/f, -( (pow(f,2)+pow(u2,2))/f ),   v2 };
+      vector<double> jv2 {   0,  -f/z2,  v2/z2,  (pow(f,2)+pow(u2,2))/f,                   -(u2*v2)/f,  -u2 };
+
+      vector<vector<double>> jujv {ju,jv,ju1,jv1,ju2,jv2};
+
+      rw::math::Jacobian imageJ(6,6);
+      for (int i = 0; i<imageJ.size1();i++)
+      {
+          for(int j = 0; j<imageJ.size2();j++)
+          {
+              imageJ(i,j)=jujv[i][j];
+          }
+      }
+      return imageJ;
+    }
 
 void SamplePlugin::timer() {
     if (_framegrabber != NULL) {
@@ -316,24 +370,48 @@ void SamplePlugin::timer() {
 
         /// Perfect point follow:
         Transform3D<double> MarkerToCam = tcp_frame->fTf(markerFrame,state);
+
+        Rotation3D<double> R(1,0,0,0,1,0,0,0,1);
+        Vector3D<double> p1(0.15,0.15,0);
+        Vector3D<double> p2(-0.15,0.15,0);
+        Vector3D<double> p3(0.15,-0.15,0);
+
+        Transform3D<double> T1(p1,R);
+        Transform3D<double> T2(p2,R);
+        Transform3D<double> T3(p3,R);
+
+        Transform3D<double> point1 = MarkerToCam * T1;
+        Transform3D<double> point2 = MarkerToCam * T2;
+        Transform3D<double> point3 = MarkerToCam * T3;
         // Get image Jacobian
-        double x = MarkerToCam.P()(0) , y = MarkerToCam.P()(1) , z = MarkerToCam.P()(2), f=1;
+/// Img 1 point
         //log().info() << "Point: " << x << " , " << y << " , " << z << "\n";
-        rw::math::Jacobian imJ = imageJ(x,y,z,f);
+        // double x = MarkerToCam.P()(0) , y = MarkerToCam.P()(1) , z = MarkerToCam.P()(2), f=1;
+        // rw::math::Jacobian imJ = imageJ(x,y,z,f);
+        // Vector2D<double> DuDv(0.0,0.0);
+        // double deltaU = (f*x)/z ;
+        // double deltav = (f*y)/z;
+        // DuDv(0) = -deltaU;
+        // DuDv(1) = -deltav;
 
-        // double lastU = (f*_lastx)/_lastz;
-        // double lastV = (f*_lasty)/_lastz;
-        Vector2D<double> DuDv(0.0,0.0);
-        double deltaU = (f*x)/z ;//- lastU;
-        double deltav = (f*y)/z;// - lastV;
-        DuDv(0) = -deltaU;
-        DuDv(1) = -deltav;
+/// Img 3 points
+        double x1 = point1.P()(0) , y1 = point1.P()(1) , z1 = point1.P()(2), f=1;
+        double x2 = point2.P()(0) , y2 = point2.P()(1) , z2 = point2.P()(2);
+        double x3 = point3.P()(0) , y3 = point3.P()(1) , z3 = point3.P()(2);
+        rw::math::Jacobian imJ = imageJ3(x1, y1, z1, x2, y2, z2, x3, y3, z3, f);
+        log().info() << "IMG J " << imJ << "\n";
 
-        //log().info() << "DuDv:" << DuDv(0) << "," << DuDv(1) << "\n";
+        Eigen::VectorXd DuDv(6);
+        //rw::math::Jacobian DuDv();
+        DuDv<<( D(x1,z1,f), D(y1,z1,f), D(x2,z2,f), D(y2,z2,f), D(x3,z3,f), D(y3,z3,f) );
+        log().info() << "DUDV: " << DuDv << "\n";
         // Get Zimg
         rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
         log().info() << "Zimg " << Zimg << "\n";
-        rw::math::Q deltaQ (LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv.e() );
+//IMG 1         rw::math::Q deltaQ (LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv.e() );
+
+        rw::math::Q deltaQ ( LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv );
+
         //rw::math::Q deltaQ( Zimg.e().transpose() * LinearAlgebra::pseudoInverse(Zimg.e()*Zimg.e().transpose() ) * DuDv.e() );
         log().info() << "deltaQ:" << deltaQ << "\n";
         //  state = _wc->getDefaultState();

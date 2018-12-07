@@ -56,7 +56,7 @@ private:
 
     QTimer* _timer;
 
-    double _deltaT = 1;
+    double _deltaT = 1000;
 
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;
