@@ -48,33 +48,32 @@ SamplePlugin::SamplePlugin():
 	_bgRender = new RenderImage(bgImage,2.5/1000.0);
 	_framegrabber = NULL;
 }
-
 SamplePlugin::~SamplePlugin()
 {
     delete _textureRender;
     delete _bgRender;
 }
-
 void SamplePlugin::initialize() {
 	log().info() << "INITALIZE" << "\n";
 
 	getRobWorkStudio()->stateChangedEvent().add(std::bind(&SamplePlugin::stateChangedListener, this, _1), this);
 	// Auto load workcell
-	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/alexdupond/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
-	getRobWorkStudio()->setWorkCell(wc);
+//	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/alexdupond/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
+    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/miols15/ROVI/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
+    getRobWorkStudio()->setWorkCell(wc);
 
 
 	// Load Lena image
 	Mat im, image;
-	im = imread("/home/alexdupond/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
-	cvtColor(im, image, CV_BGR2RGB); // Switch the red and blue color channels
+//	im = imread("/home/alexdupond/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
+    im = imread("/home/miols15/ROVI/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
+    cvtColor(im, image, CV_BGR2RGB); // Switch the red and blue color channels
 	if(! image.data ) {
 		RW_THROW("Could not open or find the image: please modify the file path in the source code!");
 	}
 	QImage img(image.data, image.cols, image.rows, image.step, QImage::Format_RGB888); // Create QImage from the OpenCV image
 	_label->setPixmap(QPixmap::fromImage(img)); // Show the image at the label in the plugin
 }
-
 void SamplePlugin::open(WorkCell* workcell)
 {
     log().info() << "OPEN" << "\n";
@@ -113,9 +112,9 @@ void SamplePlugin::open(WorkCell* workcell)
 	}
     }
 }
-
 void SamplePlugin::loadMotions(){
-  string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
+ // string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
+  string path = "/home/miols15/ROVI/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
   std::ifstream motionFile(path);
 
 
@@ -131,8 +130,6 @@ void SamplePlugin::loadMotions(){
     motionFile.close();
   }
 }
-
-
 void SamplePlugin::close() {
     log().info() << "CLOSE" << "\n";
 
@@ -155,14 +152,11 @@ void SamplePlugin::close() {
 	_framegrabber = NULL;
 	_wc = NULL;
 }
-
 Mat SamplePlugin::toOpenCVImage(const Image& img) {
 	Mat res(img.getHeight(),img.getWidth(), CV_8UC3);
 	res.data = (uchar*)img.getImageData();
 	return res;
 }
-
-
 void SamplePlugin::btnPressed() {
     QObject *obj = sender();
 	if(obj==_btn0){
@@ -182,14 +176,18 @@ void SamplePlugin::btnPressed() {
     _motionIndex = 0;
 
 		Image::Ptr image;
-		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/markers/Marker1.ppm");
+//		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/markers/Marker1.ppm");
+        image = ImageLoader::Factory::load("/home/miols15/ROVI/ROVI/SamplePluginPA10/markers/Marker1.ppm");
 		_textureRender->setImage(*image);
-		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/backgrounds/color1.ppm");
-		_bgRender->setImage(*image);
+//		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/backgrounds/color1.ppm");
+        image = ImageLoader::Factory::load("/home/miols15/ROVI/ROVI/SamplePluginPA10/backgrounds/color1.ppm");
+
+        _bgRender->setImage(*image);
 		getRobWorkStudio()->updateAndRepaint();
 	} else if(obj==_btn1){
 		log().info() << "Button 1\n";
 		// Toggle the timer on and off
+
 		if (!_timer->isActive())
 		    _timer->start(_deltaT); // run 100 = 10 Hz // deltat
 		else
@@ -219,18 +217,18 @@ rw::math::Jacobian getZimg (rw::math::Jacobian imageJacobian, rw::kinematics::Fr
     // Get  RBC =R-Cam_Base Transposed
     rw::math::Transform3D<> baseTtool_rw = device->baseTframe(tcp_frame, state);
     Rotation3D<double> Rot = baseTtool_rw.R().inverse();
-    rw::math::Jacobian TRot(6,6);
-        TRot(0,0) = Rot(0,0);
-        TRot(0,1) = Rot(0,1);
-        TRot(0,2) = Rot(0,2);
+//    rw::math::Jacobian TRot(6,6);
+//        TRot(0,0) = Rot(0,0);
+//        TRot(0,1) = Rot(0,1);
+//        TRot(0,2) = Rot(0,2);
 
-        TRot(1,0) = Rot(0,3);
-        TRot(1,1) = Rot(0,4);
-        TRot(1,2) = Rot(0,5);
+//        TRot(1,0) = Rot(0,3);
+//        TRot(1,1) = Rot(0,4);
+//        TRot(1,2) = Rot(0,5);
 
-        TRot(2,0) = Rot(0,6);
-        TRot(2,1) = Rot(0,7);
-        TRot(2,2) = Rot(0,8);
+//        TRot(2,0) = Rot(0,6);
+//        TRot(2,1) = Rot(0,7);
+//        TRot(2,2) = Rot(0,8);
 
     int sizeJ = 6;
     rw::math::Jacobian Sp(sizeJ,sizeJ);
@@ -238,13 +236,14 @@ rw::math::Jacobian getZimg (rw::math::Jacobian imageJacobian, rw::kinematics::Fr
     for (int row = 0; row <= sizeJ-1; row++){
         for ( int col = 0; col <= sizeJ-1; col++){
             if (row <= 2 && col <= 2 )
-                Sp(row,col) = TRot(row,col);
+                Sp(row,col) = Rot(row,col);
             else if(row > 2 && col > 2 )
                 Sp(row,col) = Rot(row-3, col-3);
             else
                 Sp(row,col) = 0;
         }
     }
+    cout << "SP: " << Sp << "\n" << endl;
     return (imageJacobian*Sp)*robotJ;  // Zimg= Image Jacobian * S(p) * Robot-Jacobian(q)
 }
 double D(double xORy,double z, double f){
@@ -291,8 +290,7 @@ rw::math::Jacobian imageJ2 (double x,double y,double z, double x1,double y1, dou
     }
     return imageJ;
   }
-
-  // Get IImage J
+// Get IImage J
 rw::math::Jacobian imageJ3 (double x,double y,double z, double x1,double y1, double z1,double x2,double y2, double z2,double f){
       double u = (f * x)/z;
       double v = (f * y)/z;
@@ -321,7 +319,6 @@ rw::math::Jacobian imageJ3 (double x,double y,double z, double x1,double y1, dou
       }
       return imageJ;
     }
-
 void SamplePlugin::timer() {
     if (_framegrabber != NULL) {
         // Get the image as a RW image
@@ -347,14 +344,16 @@ void SamplePlugin::timer() {
         Mat imflip;
         cv::flip(im, imflip, 0);
 
+cout << "Before find CenterPoint" << endl;
+
         // Show in QLabel
         QImage img(imflip.data, imflip.cols, imflip.rows, imflip.step, QImage::Format_RGB888);
         QPixmap p = QPixmap::fromImage(img);
         unsigned int maxW = 400;
         unsigned int maxH = 800;
         _label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
-        _motionIndex++;
-        Point centerPoint = findCenterMaker1(im);
+
+//        Point centerPoint = findCenterMaker1(im);
 
         // Robo devices
         string device_name = "PA10";
@@ -363,7 +362,7 @@ void SamplePlugin::timer() {
           RW_THROW("Device " << device_name << " was not found!");
         }
 
-        rw::kinematics::Frame* tcp_frame = _wc->findFrame("CameraSim");
+        rw::kinematics::Frame* tcp_frame = _wc->findFrame("Camera");
         if(tcp_frame == nullptr) {
           RW_THROW("TCP 'Camera' frame not found!");
         }
@@ -380,7 +379,8 @@ void SamplePlugin::timer() {
         Transform3D<double> T2(p2,R);
         Transform3D<double> T3(p3,R);
 
-        Transform3D<double> point1 = MarkerToCam * T1;
+cout << "MarkerToCam * P1 " << endl;
+        Vector3D<double> point1 = MarkerToCam * p1;
         Transform3D<double> point2 = MarkerToCam * T2;
         Transform3D<double> point3 = MarkerToCam * T3;
         // Get image Jacobian
@@ -395,23 +395,52 @@ void SamplePlugin::timer() {
         // DuDv(1) = -deltav;
 
 /// Img 3 points
-        double x1 = point1.P()(0) , y1 = point1.P()(1) , z1 = point1.P()(2), f=1;
+//        double x1 = point1.P()(0) , y1 = point1.P()(1) , z1 = point1.P()(2), f=1;
+        double x1 = point1(0) , y1 = point1(1) , z1 = point1(2), f=1;
         double x2 = point2.P()(0) , y2 = point2.P()(1) , z2 = point2.P()(2);
         double x3 = point3.P()(0) , y3 = point3.P()(1) , z3 = point3.P()(2);
+cout << "Get img Jacobian " << endl;
         rw::math::Jacobian imJ = imageJ3(x1, y1, z1, x2, y2, z2, x3, y3, z3, f);
         log().info() << "IMG J " << imJ << "\n";
+cout << "Got imJ" << endl;
+        vector<Vector2D<double>> uv = { {D(x1,z1,f), D(y1,z1,f)}, {D(x2,z2,f), D(y2,z2,f)},{ D(x3,z3,f), D(y3,z3,f)} };
 
-        Eigen::VectorXd DuDv(6);
+        if (_motionIndex == 0)
+        {
+            _uvDesired = uv;
+        }
+cout << "got _uvDesired * P1 " << endl;
+
+        Eigen::Matrix<double,6, 1> duv;
+        for(int i= 0; i < uv.size(); i++)
+        {
+            auto d =  _uvDesired[i]-uv[i];
+            duv(i*2, 0) = d(0);
+            duv(i*2+1, 0) = d(1);
+        }
+
+cout << "Got duv " << endl;
+        // IMG 1 Eigen::VectorXd DuDv(6);
         //rw::math::Jacobian DuDv();
-        DuDv<<( -D(x1,z1,f), -D(y1,z1,f), D(x2,z2,f), -D(y2,z2,f), -D(x3,z3,f), D(y3,z3,f) );
+        // IMG ! DuDv<<( );
 
-        log().info() << "DUDV: " << DuDv << "\n";
+        // log().info() << "DUDV: " << DuDv << "\n";
         // Get Zimg
+cout << "TEST before Z img" << endl;
         rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
+ cout << "got Zimg" << endl;
         log().info() << "Zimg " << Zimg << "\n";
 //IMG 1         rw::math::Q deltaQ (LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv.e() );
 
-        rw::math::Q deltaQ ( LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv );
+
+        auto Z = Zimg.e() * Zimg.e().transpose(); // Zimg = 6x7 Z =6*6
+cout << "Got Z "<< endl;
+        rw::math::Q y (LinearAlgebra::pseudoInverse(Z) * duv); //6*1
+cout << "Got y :\n"<< y << "\nZimg: \n" << Zimg << "\nduv: \n"<< duv << "\nZ:\n"<< Z << endl;
+        rw::math::Q deltaQ (Zimg.e().transpose() * y.e()); //7*6 * 6*1
+cout << "Got delta Q "<< endl;
+
+        //rw::math::Q deltaQ ( LinearAlgebra::pseudoInverse(Zimg.e()) * duv );
 
         //rw::math::Q deltaQ( Zimg.e().transpose() * LinearAlgebra::pseudoInverse(Zimg.e()*Zimg.e().transpose() ) * DuDv.e() );
         log().info() << "deltaQ:" << deltaQ << "\n";
@@ -423,7 +452,7 @@ void SamplePlugin::timer() {
         rw::math::Q vLimit = device->getVelocityLimits();
         log().info() << "DeltaT " << deltaT << "\nVelocity limits: \n"  << vLimit << "\n Velocity: \n" << v << "\n";
 
-        for(int i = 0; i < 7;i++ )
+        for(int i = 0; i < 7;i++ ) //
         {
           if( v(i) > vLimit(i))
           {
@@ -438,20 +467,18 @@ void SamplePlugin::timer() {
         }
         log().info() << "deltaQ:" << deltaQ << "\n";
 
+        cout << "TEST before set q" << endl;
+
         rw::math::Q q = device->getQ(state);
         rw::math::Q newQ = q+deltaQ;
         device->setQ(newQ, state);
-//        log().info() << "Q + Qdelta:" << newQ << "\n";
-        //stateChangedListener(state);
         getRobWorkStudio()->setState(state);
+        _motionIndex++;
 	}
 }
-
 void SamplePlugin::stateChangedListener(const State& state) {
   _state = state;
 }
-
-
 Point SamplePlugin::findCenterMaker1(Mat &image){
   Mat hsv, blured_img;
   Mat detected_egdes, dst, src, gray;

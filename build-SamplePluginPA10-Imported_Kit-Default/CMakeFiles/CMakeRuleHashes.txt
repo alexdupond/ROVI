@@ -1,0 +1,4 @@
+# Hashes of file build rules.
+fb10e59f0c1c15e1d484a859aba1d9f4 qrc_resources.cpp
+945205fc3324f4f78e6e6e7d91f7db18 src/moc_SamplePlugin.cpp
+c93031aee07c894faf6bea6c4da50910 ui_SamplePlugin.h

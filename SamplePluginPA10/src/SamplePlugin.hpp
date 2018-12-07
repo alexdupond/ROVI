@@ -56,7 +56,8 @@ private:
 
     QTimer* _timer;
 
-    double _deltaT = 50;
+    double _deltaT = 1000;
+    vector<rw::math::Vector2D<double>> _uvDesired;
 
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;

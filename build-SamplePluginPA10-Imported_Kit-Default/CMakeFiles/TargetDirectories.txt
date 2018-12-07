@@ -1,0 +1,3 @@
+/home/miols15/ROVI/ROVI/build-SamplePluginPA10-Imported_Kit-Default/CMakeFiles/rebuild_cache.dir
+/home/miols15/ROVI/ROVI/build-SamplePluginPA10-Imported_Kit-Default/CMakeFiles/RoVi1PluginPA10.dir
+/home/miols15/ROVI/ROVI/build-SamplePluginPA10-Imported_Kit-Default/CMakeFiles/edit_cache.dir
