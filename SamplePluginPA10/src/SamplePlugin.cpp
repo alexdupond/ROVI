@@ -40,7 +40,9 @@ SamplePlugin::SamplePlugin():
 	// now connect stuff from the ui component
 	connect(_btn0    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
 	connect(_btn1    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-	connect(_spinBox  ,SIGNAL(valueChanged(int)), this, SLOT(btnPressed()) );
+    connect(_spinBox ,SIGNAL(valueChanged(int)), this, SLOT(btnPressed()) );
+    connect(_checkBox,SIGNAL(pressed()), this, SLOT(btnPressed()) );
+    connect(_Vision  ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
 
 	Image textureImage(300,300,Image::GRAY,Image::Depth8U);
 	_textureRender = new RenderImage(textureImage);
@@ -159,21 +161,22 @@ Mat SamplePlugin::toOpenCVImage(const Image& img) {
 }
 void SamplePlugin::btnPressed() {
     QObject *obj = sender();
-	if(obj==_btn0){
+
+    if(obj==_btn0){
 		log().info() << "Button 0\n";
-    // Loads the motion
-    loadMotions();
+        // Loads the motion
+        loadMotions();
 
 		// Set a new texture (one pixel = 1 mm)
-    string device_name = "PA10";
-    rw::models::Device::Ptr device = _wc->findDevice("PA10");
-    if(device == nullptr) {
-      RW_THROW("Device " << device_name << " was not found!");
-    }
-    rw::math::Q startQ(7, 0, -0.65, 0, 1.8, 0, 0.42, 0);
-    device->setQ(startQ, _state);
-    getRobWorkStudio()->setState(_state);
-    _motionIndex = 0;
+        string device_name = "PA10";
+        rw::models::Device::Ptr device = _wc->findDevice("PA10");
+        if(device == nullptr) {
+            RW_THROW("Device " << device_name << " was not found!");
+         }
+        rw::math::Q startQ(7, 0, -0.65, 0, 1.8, 0, 0.42, 0);
+        device->setQ(startQ, _state);
+        getRobWorkStudio()->setState(_state);
+        _motionIndex = 0;
 
 		Image::Ptr image;
 //		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/markers/Marker1.ppm");
@@ -189,12 +192,23 @@ void SamplePlugin::btnPressed() {
 		// Toggle the timer on and off
 
 		if (!_timer->isActive())
-		    _timer->start(_deltaT); // run 100 = 10 Hz // deltat
+            _timer->start(50); // run 100 = 10 Hz // deltat
 		else
 			_timer->stop();
 	} else if(obj==_spinBox){
+        _deltaT = 10 * _spinBox->value();
 		log().info() << "spin value:" << _spinBox->value() << "\n";
 	}
+    else if (obj==_checkBox){
+        if ( _checkBox->isChecked() ){
+            _singlePtracking = true;
+            cout << "SinglePtracking set: True" << endl;
+        }
+        else{
+            _singlePtracking = false;
+            cout << "SinglePtracking set: False" << endl;
+        }
+    }
 }
 
 // This function calculates delta U as in Equation 4.13. The output class is a velocity screw as that is a 6D vector with a positional and rotational part
@@ -217,19 +231,6 @@ rw::math::Jacobian getZimg (rw::math::Jacobian imageJacobian, rw::kinematics::Fr
     // Get  RBC =R-Cam_Base Transposed
     rw::math::Transform3D<> baseTtool_rw = device->baseTframe(tcp_frame, state);
     Rotation3D<double> Rot = baseTtool_rw.R().inverse();
-//    rw::math::Jacobian TRot(6,6);
-//        TRot(0,0) = Rot(0,0);
-//        TRot(0,1) = Rot(0,1);
-//        TRot(0,2) = Rot(0,2);
-
-//        TRot(1,0) = Rot(0,3);
-//        TRot(1,1) = Rot(0,4);
-//        TRot(1,2) = Rot(0,5);
-
-//        TRot(2,0) = Rot(0,6);
-//        TRot(2,1) = Rot(0,7);
-//        TRot(2,2) = Rot(0,8);
-
     int sizeJ = 6;
     rw::math::Jacobian Sp(sizeJ,sizeJ);
     // Make S(q) = (RBC, 0) (0,RBC)
@@ -330,21 +331,16 @@ void SamplePlugin::timer() {
         Frame* markerFrame = _wc->findFrame("Marker");
         MovableFrame* mFrame = (MovableFrame*)markerFrame;
 
-
         if(_motionIndex == (int)_motions.size())
           _motionIndex = 0;
 
         Transform3D<double> trans = _motions[_motionIndex];
         mFrame->setTransform(trans, state);
-        //stateChangedListener(state);
-        //getRobWorkStudio()->setState(_state);
 
         // Convert to OpenCV image
         Mat im = toOpenCVImage(image);
         Mat imflip;
         cv::flip(im, imflip, 0);
-
-cout << "Before find CenterPoint" << endl;
 
         // Show in QLabel
         QImage img(imflip.data, imflip.cols, imflip.rows, imflip.step, QImage::Format_RGB888);
@@ -353,7 +349,10 @@ cout << "Before find CenterPoint" << endl;
         unsigned int maxH = 800;
         _label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
 
-//        Point centerPoint = findCenterMaker1(im);
+        Point centerPoint = findCenterMaker1(im);
+        if ( _Vision->isChecked() ){
+            log().info() << " \n Centerpoint:" << centerPoint <<"\n";
+        }
 
         // Robo devices
         string device_name = "PA10";
@@ -367,91 +366,73 @@ cout << "Before find CenterPoint" << endl;
           RW_THROW("TCP 'Camera' frame not found!");
         }
 
-        /// Perfect point follow:
         Transform3D<double> MarkerToCam = tcp_frame->fTf(markerFrame,state);
+        rw::math::Q deltaQ;
+        if (_checkBox->isChecked() ){
+cout << "_singlePtracking true" << endl;
 
-        Rotation3D<double> R(1,0,0,0,1,0,0,0,1);
-        Vector3D<double> p1(0.15,0.15,0);
-        Vector3D<double> p2(-0.15,0.15,0);
-        Vector3D<double> p3(0.15,-0.15,0);
+             double x = MarkerToCam.P()(0) , y = MarkerToCam.P()(1) , z = MarkerToCam.P()(2), f=1;
+             rw::math::Jacobian imJ = imageJ(x,y,z,f);
+             rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
 
-        Transform3D<double> T1(p1,R);
-        Transform3D<double> T2(p2,R);
-        Transform3D<double> T3(p3,R);
-
-cout << "MarkerToCam * P1 " << endl;
-        Vector3D<double> point1 = MarkerToCam * p1;
-        Transform3D<double> point2 = MarkerToCam * T2;
-        Transform3D<double> point3 = MarkerToCam * T3;
-        // Get image Jacobian
-/// Img 1 point
-        //log().info() << "Point: " << x << " , " << y << " , " << z << "\n";
-        // double x = MarkerToCam.P()(0) , y = MarkerToCam.P()(1) , z = MarkerToCam.P()(2), f=1;
-        // rw::math::Jacobian imJ = imageJ(x,y,z,f);
-        // Vector2D<double> DuDv(0.0,0.0);
-        // double deltaU = (f*x)/z ;
-        // double deltav = (f*y)/z;
-        // DuDv(0) = -deltaU;
-        // DuDv(1) = -deltav;
-
-/// Img 3 points
-//        double x1 = point1.P()(0) , y1 = point1.P()(1) , z1 = point1.P()(2), f=1;
-        double x1 = point1(0) , y1 = point1(1) , z1 = point1(2), f=1;
-        double x2 = point2.P()(0) , y2 = point2.P()(1) , z2 = point2.P()(2);
-        double x3 = point3.P()(0) , y3 = point3.P()(1) , z3 = point3.P()(2);
-cout << "Get img Jacobian " << endl;
-        rw::math::Jacobian imJ = imageJ3(x1, y1, z1, x2, y2, z2, x3, y3, z3, f);
-        log().info() << "IMG J " << imJ << "\n";
-cout << "Got imJ" << endl;
-        vector<Vector2D<double>> uv = { {D(x1,z1,f), D(y1,z1,f)}, {D(x2,z2,f), D(y2,z2,f)},{ D(x3,z3,f), D(y3,z3,f)} };
-
-        if (_motionIndex == 0)
-        {
-            _uvDesired = uv;
+             Vector2D<double> DuDv(0.0,0.0);
+             double deltaU = (f*x)/z ;
+             double deltav = (f*y)/z;
+             DuDv(0) = -deltaU;
+             DuDv(1) = -deltav;
+             cout << "got Zimg" << endl;
+             rw::math::Q TestDeltaQ (LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv.e() );
+             deltaQ = TestDeltaQ; //7*6 * 6*1
         }
-cout << "got _uvDesired * P1 " << endl;
+        else {
+cout << "_singlePtracking False" << endl;
+            /// Perfect point follow:
+            Rotation3D<double> R(1,0,0,0,1,0,0,0,1);
+            Vector3D<double> p1(0.15,0.15,0);
+            Vector3D<double> p2(-0.15,0.15,0);
+            Vector3D<double> p3(0.15,-0.15,0);
 
-        Eigen::Matrix<double,6, 1> duv;
-        for(int i= 0; i < uv.size(); i++)
-        {
-            auto d =  _uvDesired[i]-uv[i];
-            duv(i*2, 0) = d(0);
-            duv(i*2+1, 0) = d(1);
+            Transform3D<double> T1(p1,R);
+            Transform3D<double> T2(p2,R);
+            Transform3D<double> T3(p3,R);
+
+            Vector3D<double> point1 = MarkerToCam * p1;
+            Transform3D<double> point2 = MarkerToCam * T2;
+            Transform3D<double> point3 = MarkerToCam * T3;
+
+            double x1 = point1(0) , y1 = point1(1) , z1 = point1(2), f=1;
+            double x2 = point2.P()(0) , y2 = point2.P()(1) , z2 = point2.P()(2);
+            double x3 = point3.P()(0) , y3 = point3.P()(1) , z3 = point3.P()(2);
+
+            rw::math::Jacobian imJ = imageJ3(x1, y1, z1, x2, y2, z2, x3, y3, z3, f);
+            vector<Vector2D<double>> uv = { {D(x1,z1,f), D(y1,z1,f)}, {D(x2,z2,f), D(y2,z2,f)},{ D(x3,z3,f), D(y3,z3,f)} };
+cout << "IMj Calculated true" << endl;
+            if (_motionIndex == 0)
+            {
+                _uvDesired = uv;
+            }
+
+            Eigen::Matrix<double,6, 1> duv;
+            for(int i= 0; i < uv.size(); i++)
+            {
+                auto d =  _uvDesired[i]-uv[i];
+                duv(i*2, 0) = d(0);
+                duv(i*2+1, 0) = d(1);
+            }
+            rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
+            auto Z = Zimg.e() * Zimg.e().transpose(); // Zimg = 6x7 Z =6*6
+            rw::math::Q y (LinearAlgebra::pseudoInverse(Z) * duv); //6*1
+            rw::math::Q initDeltaQ ( Zimg.e().transpose() * y.e() );
+cout << "initDelta Q (Z.e()  ) " << endl;
+            deltaQ = initDeltaQ; //7*6 * 6*1
         }
 
-cout << "Got duv " << endl;
-        // IMG 1 Eigen::VectorXd DuDv(6);
-        //rw::math::Jacobian DuDv();
-        // IMG ! DuDv<<( );
-
-        // log().info() << "DUDV: " << DuDv << "\n";
-        // Get Zimg
-cout << "TEST before Z img" << endl;
-        rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
- cout << "got Zimg" << endl;
-        log().info() << "Zimg " << Zimg << "\n";
-//IMG 1         rw::math::Q deltaQ (LinearAlgebra::pseudoInverse(Zimg.e()) * DuDv.e() );
-
-
-        auto Z = Zimg.e() * Zimg.e().transpose(); // Zimg = 6x7 Z =6*6
-cout << "Got Z "<< endl;
-        rw::math::Q y (LinearAlgebra::pseudoInverse(Z) * duv); //6*1
-cout << "Got y :\n"<< y << "\nZimg: \n" << Zimg << "\nduv: \n"<< duv << "\nZ:\n"<< Z << endl;
-        rw::math::Q deltaQ (Zimg.e().transpose() * y.e()); //7*6 * 6*1
-cout << "Got delta Q "<< endl;
-
-        //rw::math::Q deltaQ ( LinearAlgebra::pseudoInverse(Zimg.e()) * duv );
-
-        //rw::math::Q deltaQ( Zimg.e().transpose() * LinearAlgebra::pseudoInverse(Zimg.e()*Zimg.e().transpose() ) * DuDv.e() );
-        log().info() << "deltaQ:" << deltaQ << "\n";
-        //  state = _wc->getDefaultState();
-
-        //log().info() << "Q:" << q << "\n";
         double deltaT = _deltaT/1000;
         rw::math::Q v(7, deltaQ(0)/deltaT, deltaQ(1)/deltaT, deltaQ(2)/deltaT, deltaQ(3)/deltaT, deltaQ(4)/deltaT, deltaQ(5)/deltaT, deltaQ(6)/deltaT);
         rw::math::Q vLimit = device->getVelocityLimits();
         log().info() << "DeltaT " << deltaT << "\nVelocity limits: \n"  << vLimit << "\n Velocity: \n" << v << "\n";
 
+        // Speed Limits
         for(int i = 0; i < 7;i++ ) //
         {
           if( v(i) > vLimit(i))
@@ -466,8 +447,6 @@ cout << "Got delta Q "<< endl;
           }
         }
         log().info() << "deltaQ:" << deltaQ << "\n";
-
-        cout << "TEST before set q" << endl;
 
         rw::math::Q q = device->getQ(state);
         rw::math::Q newQ = q+deltaQ;

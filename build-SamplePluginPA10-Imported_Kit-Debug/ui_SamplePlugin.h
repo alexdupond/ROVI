@@ -34,6 +34,7 @@ public:
     QPushButton *_btn0;
     QPushButton *_btn1;
     QCheckBox *_checkBox;
+    QCheckBox *_Vision;
     QSpinBox *_spinBox;
     QSlider *_slider;
     QLabel *_label;
@@ -64,8 +65,16 @@ public:
 
         verticalLayout->addWidget(_checkBox);
 
+        _Vision = new QCheckBox(dockWidgetContents);
+        _Vision->setObjectName(QStringLiteral("_Vision"));
+
+        verticalLayout->addWidget(_Vision);
+
         _spinBox = new QSpinBox(dockWidgetContents);
         _spinBox->setObjectName(QStringLiteral("_spinBox"));
+        _spinBox->setMinimum(5);
+        _spinBox->setMaximum(100);
+        _spinBox->setValue(50);
 
         verticalLayout->addWidget(_spinBox);
 
@@ -95,7 +104,8 @@ public:
         SamplePlugin->setWindowTitle(QApplication::translate("SamplePlugin", "DockWidget", Q_NULLPTR));
         _btn0->setText(QApplication::translate("SamplePlugin", " Load ", Q_NULLPTR));
         _btn1->setText(QApplication::translate("SamplePlugin", " Start sequence ", Q_NULLPTR));
-        _checkBox->setText(QApplication::translate("SamplePlugin", "CheckBox", Q_NULLPTR));
+        _checkBox->setText(QApplication::translate("SamplePlugin", "1 point tracking", Q_NULLPTR));
+        _Vision->setText(QApplication::translate("SamplePlugin", "Vision Tracking", Q_NULLPTR));
         _label->setText(QApplication::translate("SamplePlugin", "Label", Q_NULLPTR));
     } // retranslateUi
 

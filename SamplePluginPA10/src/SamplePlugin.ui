@@ -34,12 +34,29 @@
       <item>
        <widget class="QCheckBox" name="_checkBox">
         <property name="text">
-         <string>CheckBox</string>
+         <string>1 point tracking</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QSpinBox" name="_spinBox"/>
+       <widget class="QCheckBox" name="_Vision">
+        <property name="text">
+         <string>Vision Tracking</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="_spinBox">
+        <property name="minimum">
+         <number>5</number>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>50</number>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QSlider" name="_slider">
