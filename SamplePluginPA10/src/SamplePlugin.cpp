@@ -366,15 +366,9 @@ void SamplePlugin::timer() {
              if ( _Vision->isChecked() ) //Vision enable
              {
                  //Camera is 1024 * 768
-                 centerPoint = findCenterMaker1(im);
-                 Vector3D<double> p1 (centerPoint.x - 1024/2, //x
-                                      centerPoint.y - 768/2,  // y
-                                      0.5);                   // z
-
-                 Vector3D<double> point1 = MarkerToCam * p1; // Transform to Camera frame
-                 x = point1(0);
-                 y = point1(1);
-                 z = point1(2);
+                 x = centerPoint.x - 1024/2;
+                 y = centerPoint.y - 768/2;
+                 z = 0.5;
                  f = 832;
 
                  rw::math::Jacobian imJ = imageJ(x,y, z,f);
@@ -382,13 +376,11 @@ void SamplePlugin::timer() {
 
                  cout << "uv " << uv[0] << endl;
                  if (_motionIndex == 0){//First time make desired = 0,0
-                     Vector3D<double> p1first(512,384,0);
-                     Vector3D<double> point1first = MarkerToCam * p1first;
-                     x = point1first(0); // 100 = golden factor
-                     y = point1first(1);
-                     z = point1first(2);
+                     x = 1024/2;
+                     y = 768/2;
+                     z = 0.5;
                      f = 832;
-                    vector<Vector2D<double>> uv1 = { {D(x,z,f), D(y,z,f)} };
+                     vector<Vector2D<double>> uv1 = { {D(x,z,f), D(y,z,f)} };
                      _uv1pDesired = uv1;
                  }
                  Eigen::Matrix<double,2, 1> duv;
@@ -399,7 +391,7 @@ void SamplePlugin::timer() {
                      duv(i*2, 0)   = d(0);
                      duv(i*2+1, 0) = d(1);
                  }
-                 log().info() << "xyz\n "<< point1 << "uv:\n" << uv[0] << "uvDesired: \n"<< _uv1pDesired[0] << "\n";
+                 log().info() << "xyz\n "<< x << ","<< y << ","<< z << "\n" << "uv:\n" << uv[0] << "uvDesired: \n"<< _uv1pDesired[0] << "\n";
 
                  //log().info() << "duv: \n" << duv <<"\n point2FollowCamframe: \n" << MarkerToCam.P() << "\n";
                  rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
