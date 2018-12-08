@@ -60,6 +60,7 @@ private:
     double _deltaT = 500;
 
     vector<rw::math::Vector2D<double>> _uvDesired;
+    vector<rw::math::Vector2D<double>> _uv1pDesired;
 
     rw::models::WorkCell::Ptr _wc;
     rw::kinematics::State _state;
