@@ -15,6 +15,10 @@ opencv2/imgproc/imgproc.hpp
 -
 math.h
 -
+cstdio
+-
+ctime
+-
 iostream
 -
 

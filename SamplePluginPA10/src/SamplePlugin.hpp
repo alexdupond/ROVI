@@ -21,6 +21,8 @@
 // Qt
 #include <QTimer>
 #include <vector>
+#include <iostream>
+#include <fstream>
 
 #include "ui_SamplePlugin.h"
 
@@ -55,9 +57,11 @@ private:
     Point findCenterMaker1(Mat &image);
 
     QTimer* _timer;
+    ofstream _file;
 
     bool _singlePtracking = false;
-    double _deltaT = 500;
+    double _deltaT = 1000;
+    double _max_error = 0; 
 
     vector<rw::math::Vector2D<double>> _uvDesired;
     vector<rw::math::Vector2D<double>> _uv1pDesired;

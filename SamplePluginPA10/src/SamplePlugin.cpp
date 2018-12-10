@@ -12,6 +12,9 @@
 #include <rw/math.hpp>
 #include <math.h>
 
+#include <cstdio>
+#include <ctime>
+
 #include <iostream>
 #include <fstream>
 
@@ -60,15 +63,16 @@ void SamplePlugin::initialize() {
 
 	getRobWorkStudio()->stateChangedEvent().add(std::bind(&SamplePlugin::stateChangedListener, this, _1), this);
 	// Auto load workcell
-//	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/alexdupond/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
-    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/miols15/ROVI/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
+	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/alexdupond/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
+//    WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/miols15/ROVI/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
     getRobWorkStudio()->setWorkCell(wc);
 
-
+    // Loads the motion
+    loadMotions();
 	// Load Lena image
 	Mat im, image;
-//	im = imread("/home/alexdupond/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
-    im = imread("/home/miols15/ROVI/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
+	im = imread("/home/alexdupond/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
+  //  im = imread("/home/miols15/ROVI/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
     cvtColor(im, image, CV_BGR2RGB); // Switch the red and blue color channels
 	if(! image.data ) {
 		RW_THROW("Could not open or find the image: please modify the file path in the source code!");
@@ -115,8 +119,8 @@ void SamplePlugin::open(WorkCell* workcell)
     }
 }
 void SamplePlugin::loadMotions(){
- // string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
-  string path = "/home/miols15/ROVI/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
+  string path = "/home/alexdupond/ROVI/SamplePluginPA10/motions/MarkerMotionFast.txt";
+  //string path = "/home/miols15/ROVI/ROVI/SamplePluginPA10/motions/MarkerMotionMedium.txt";
   std::ifstream motionFile(path);
 
 
@@ -164,8 +168,8 @@ void SamplePlugin::btnPressed() {
 
     if(obj==_btn0){
 		log().info() << "Button 0\n";
-        // Loads the motion
-        loadMotions();
+
+        _max_error = 0;
 
 		// Set a new texture (one pixel = 1 mm)
         string device_name = "PA10";
@@ -179,11 +183,11 @@ void SamplePlugin::btnPressed() {
         _motionIndex = 0;
 
 		Image::Ptr image;
-//		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/markers/Marker1.ppm");
-        image = ImageLoader::Factory::load("/home/miols15/ROVI/ROVI/SamplePluginPA10/markers/Marker1.ppm");
+		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/markers/Marker1.ppm");
+//        image = ImageLoader::Factory::load("/home/miols15/ROVI/ROVI/SamplePluginPA10/markers/Marker1.ppm");
 		_textureRender->setImage(*image);
-//		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/backgrounds/color1.ppm");
-        image = ImageLoader::Factory::load("/home/miols15/ROVI/ROVI/SamplePluginPA10/backgrounds/color1.ppm");
+		image = ImageLoader::Factory::load("/home/alexdupond/ROVI/SamplePluginPA10/backgrounds/color1.ppm");
+//        image = ImageLoader::Factory::load("/home/miols15/ROVI/ROVI/SamplePluginPA10/backgrounds/color1.ppm");
 
         _bgRender->setImage(*image);
 		getRobWorkStudio()->updateAndRepaint();
@@ -196,8 +200,8 @@ void SamplePlugin::btnPressed() {
 		else
 			_timer->stop();
 	} else if(obj==_spinBox){
-        _deltaT = 10 * _spinBox->value();
-        log().info() << "_deltaT; " << _deltaT << "\n";
+        _deltaT = 10 * _spinBox->value() - 85 ;
+        log().info() << "_deltaT; " << _deltaT/1000 << "\n";
 	}
     else if (obj==_checkBox){
         if ( _checkBox->isChecked() ){
@@ -249,6 +253,8 @@ double D(double xORy,double z, double f){
 rw::math::Jacobian imageJ (double x,double y,double z,double f){
     double u = (f * x)/z;
     double v = (f * y)/z;
+
+
     vector<double> ju {-f/z,     0,  u/z,                (u*v)/f, -( (pow(f,2)+pow(u,2))/f ),   v };
     vector<double> jv {   0,  -f/z,  v/z,  (pow(f,2)+pow(u,2))/f,                   -(u*v)/f,  -u };
     vector<vector<double>> jujv {ju,jv};
@@ -316,7 +322,7 @@ rw::math::Jacobian imageJ3 (double x,double y,double z, double x1,double y1, dou
       return imageJ;
     }
 void SamplePlugin::timer() {
-    if (_framegrabber != NULL) {
+    if (_framegrabber != NULL && (_motions.size()-1) >= _motionIndex) {
         // Get the image as a RW image
         Frame* cameraFrame = _wc->findFrame("CameraSim");
         _framegrabber->grab(cameraFrame, _state);
@@ -326,8 +332,8 @@ void SamplePlugin::timer() {
         Frame* markerFrame = _wc->findFrame("Marker");
         MovableFrame* mFrame = (MovableFrame*)markerFrame;
 
-        if(_motionIndex == (int)_motions.size())
-          _motionIndex = 0;
+      //  if(_motionIndex == (int)_motions.size())
+        //  _motionIndex = 0;
 
         Transform3D<double> trans = _motions[_motionIndex];
         mFrame->setTransform(trans, state);
@@ -344,8 +350,7 @@ void SamplePlugin::timer() {
         unsigned int maxH = 800;
         _label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
 
-        Point centerPoint = findCenterMaker1(im);
-        log().info() << " \n Centerpoint:" << centerPoint.x - 1024/2 -8 << "," << centerPoint.y - 768/2 +76  <<"\n";
+
 
         // Robo devices
         string device_name = "PA10";
@@ -365,32 +370,35 @@ void SamplePlugin::timer() {
              double x, y, z, f;
              if ( _Vision->isChecked() ) //Vision enable
              {
+                std::clock_t start;
+                start = std::clock();
+                Point centerPoint = findCenterMaker1(imflip);
+                double duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+
+                log().info() << "Duration = " << duration << "\n";
+                log().info() << " \n Centerpoint:" << centerPoint.x - 1024/2<< "," << centerPoint.y - 768/2  <<"\n";
                  //Camera is 1024 * 768
-                 x = centerPoint.x - 1024/2;
-                 y = centerPoint.y - 768/2;
+                 f = 823;
                  z = 0.5;
-                 f = 832;
+                 x = (centerPoint.x - (1024/2))*z/f;
+                 y = (centerPoint.y - (768/2))*z/f;
+
 
                  rw::math::Jacobian imJ = imageJ(x,y, z,f);
                  vector<Vector2D<double>> uv = { {D(x,z,f), D(y,z,f)} };
-
                  cout << "uv " << uv[0] << endl;
                  if (_motionIndex == 0){//First time make desired = 0,0
-                     x = 1024/2;
-                     y = 768/2;
-                     z = 0.5;
-                     f = 832;
-                     vector<Vector2D<double>> uv1 = { {D(x,z,f), D(y,z,f)} };
-                     _uv1pDesired = uv1;
+                     _uv1pDesired = uv;
                  }
                  Eigen::Matrix<double,2, 1> duv;
                  for(int i= 0; i < uv.size(); i++)
                  {
                      auto d =  _uv1pDesired[i]-uv[i];
-                     cout << "uvDesired - uv "<< _uv1pDesired[i] << " uv: " << uv[i] << " = " << d << endl;
+                     log().info() << "uvDesired - uv "<< _uv1pDesired[i] << " uv: " << uv[i] << " = " << d << "\n";
                      duv(i*2, 0)   = d(0);
                      duv(i*2+1, 0) = d(1);
                  }
+
                  log().info() << "xyz\n "<< x << ","<< y << ","<< z << "\n" << "uv:\n" << uv[0] << "uvDesired: \n"<< _uv1pDesired[0] << "\n";
 
                  //log().info() << "duv: \n" << duv <<"\n point2FollowCamframe: \n" << MarkerToCam.P() << "\n";
@@ -404,7 +412,7 @@ void SamplePlugin::timer() {
                  x = MarkerToCam.P()(0);
                  y = MarkerToCam.P()(1);
                  z = MarkerToCam.P()(2);
-                 f=1;
+                 f=823;
 
                  rw::math::Jacobian imJ = imageJ(x, y, z,f);
                  vector<Vector2D<double>> uv = { {D(x,z,f), D(y,z,f)} };
@@ -413,12 +421,14 @@ void SamplePlugin::timer() {
 
 
                  Eigen::Matrix<double,2, 1> duv;
+
                  for(int i= 0; i < uv.size(); i++)
                  {
                      auto d =  _uvDesired[i]-uv[i];
                      duv(i*2, 0) = d(0);
                      duv(i*2+1, 0) = d(1);
                  }
+
                  log().info() << " duv: \n" << duv <<"\n point2FollowCamframe: \n" << MarkerToCam.P() << "\n";
                  rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
                  auto Z = Zimg.e() * Zimg.e().transpose();
@@ -442,9 +452,10 @@ void SamplePlugin::timer() {
             Transform3D<double> point2 = MarkerToCam * T2;
             Transform3D<double> point3 = MarkerToCam * T3;
 
-            double x1 = point1(0) , y1 = point1(1) , z1 = point1(2), f=1;
+            double x1 = point1(0) , y1 = point1(1) , z1 = point1(2), f=823;
             double x2 = point2.P()(0) , y2 = point2.P()(1) , z2 = point2.P()(2);
             double x3 = point3.P()(0) , y3 = point3.P()(1) , z3 = point3.P()(2);
+
 
             rw::math::Jacobian imJ = imageJ3(x1, y1, z1, x2, y2, z2, x3, y3, z3, f);
             vector<Vector2D<double>> uv = { {D(x1,z1,f), D(y1,z1,f)}, {D(x2,z2,f), D(y2,z2,f)},{ D(x3,z3,f), D(y3,z3,f)} };
@@ -461,7 +472,8 @@ void SamplePlugin::timer() {
                 duv(i*2, 0) = d(0);
                 duv(i*2+1, 0) = d(1);
             }
-            log().info() << " duv: \n" << duv <<"\n point2FollowCamframe: \n" << point1 << "\n";
+
+            //log().info() << " duv: \n" << duv <<"\n point2FollowCamframe: \n" << point1 << "\n";
             rw::math::Jacobian Zimg = getZimg(imJ, tcp_frame, state, device);
             auto Z = Zimg.e() * Zimg.e().transpose(); // Zimg = 6x7 Z =6*6
             rw::math::Q y (LinearAlgebra::pseudoInverse(Z) * duv); //6*1
@@ -472,26 +484,26 @@ void SamplePlugin::timer() {
         double deltaT = _deltaT/1000;
         rw::math::Q v(7, deltaQ(0)/deltaT, deltaQ(1)/deltaT, deltaQ(2)/deltaT, deltaQ(3)/deltaT, deltaQ(4)/deltaT, deltaQ(5)/deltaT, deltaQ(6)/deltaT);
         rw::math::Q vLimit = device->getVelocityLimits();
-        log().info() << "\n Velocity: \n" << v << "\n";
-        log().info() << "deltaQ:\n" << deltaQ << "\n";
-        // Speed Limits
+
+
         for(int i = 0; i < 7;i++ ) //
         {
           if( v(i) > vLimit(i))
           {
-            log().info() << "Velocity Limited hitted at joint: " << i << " speed: "<< v(i) << "\n";
             deltaQ(i) = vLimit(i)*deltaT;
-            log().info() << "dQ Capped to: \n" << deltaQ(i) << "\n";
           }else if(v(i) < -vLimit(i)){
-            log().info() << "Velocity Limited hitted at joint: " << i << " speed: "<< v(i) << "\n";
             deltaQ(i) = -vLimit(i)*deltaT;
-            log().info() << "dQ Capped to: \n" << deltaQ(i) << "\n";
           }
         }
 
 
+
+
+
         rw::math::Q q = device->getQ(state);
         rw::math::Q newQ = q+deltaQ;
+
+
         device->setQ(newQ, state);
         getRobWorkStudio()->setState(state);
         _motionIndex++;
